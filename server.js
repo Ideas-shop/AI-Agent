@@ -124,11 +124,29 @@ async function sendTypingIndicator(recipientId) {
 
 function splitMessage(text, maxLen) {
   if (text.length <= maxLen) return [text];
+
   const parts = [];
-  let remaining = text;
+  let remaining = text.trim();
+
   while (remaining.length > maxLen) {
-    parts.push(remaining.slice(0, maxLen));
-    remaining = remaining.slice(maxLen);
+    // আগে নিউলাইনে ভাঙার চেষ্টা করবে, না পেলে বাক্যের শেষে (।/./!/?), না পেলে স্পেসে
+    let cutAt = remaining.lastIndexOf("\n", maxLen);
+    if (cutAt < maxLen * 0.5) {
+      const sentenceEnd = Math.max(
+        remaining.lastIndexOf("। ", maxLen),
+        remaining.lastIndexOf(". ", maxLen),
+        remaining.lastIndexOf("! ", maxLen),
+        remaining.lastIndexOf("? ", maxLen)
+      );
+      cutAt = sentenceEnd > maxLen * 0.5 ? sentenceEnd + 1 : -1;
+    }
+    if (cutAt < maxLen * 0.5) {
+      cutAt = remaining.lastIndexOf(" ", maxLen);
+    }
+    if (cutAt <= 0) cutAt = maxLen; // কোনো ভালো জায়গা না পেলে বাধ্য হয়ে সরাসরি কাটবে
+
+    parts.push(remaining.slice(0, cutAt).trim());
+    remaining = remaining.slice(cutAt).trim();
   }
   if (remaining.length) parts.push(remaining);
   return parts;
