@@ -22,6 +22,50 @@ const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const conversationHistory = new Map();
 const MAX_HISTORY_TURNS = 6; // প্রতি ইউজারের শেষ ৬টা মেসেজ-রিপ্লাই মনে রাখবে
 
+// ---------- CORS (ওয়েবসাইট থেকে সরাসরি কল করার জন্য অনুমতি) ----------
+// প্রোডাকশনে চাইলে "*"-এর বদলে শুধু আপনার ডোমেইন বসাতে পারেন, নিরাপত্তার জন্য
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+
+// ---------- ওয়েবসাইট চ্যাট উইজেটের জন্য API ----------
+// এটা Facebook Messenger থেকে সম্পূর্ণ আলাদা — কোনো App Review/পারমিশন লাগে না
+// ফ্রন্টএন্ড (IdeasSHOPChat.html) থেকে সরাসরি এই endpoint-এ POST রিকোয়েস্ট আসবে
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message, sessionId } = req.body;
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "message ফিল্ড দরকার" });
+    }
+    // sessionId না থাকলে একটা অস্থায়ী আইডি বানিয়ে নেওয়া হচ্ছে (ব্রাউজার সেশন ধরে রাখতে)
+    const sid = sessionId || `web_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    const history = conversationHistory.get(sid) || [];
+    const systemPrompt = await getSystemPrompt();
+
+    const aiReply = await askAI({
+      systemPrompt,
+      history,
+      userMessage: message,
+    });
+
+    history.push({ role: "user", text: message });
+    history.push({ role: "assistant", text: aiReply });
+    while (history.length > MAX_HISTORY_TURNS * 2) history.shift();
+    conversationHistory.set(sid, history);
+
+    res.json({ reply: aiReply, sessionId: sid });
+  } catch (err) {
+    console.error("❌ /api/chat error:", err?.response?.data || err.message);
+    res.status(500).json({ reply: "দুঃখিত, একটু সমস্যা হচ্ছে। একটু পরে আবার চেষ্টা করুন 🙏" });
+  }
+});
+
 // ---------- ১. Webhook Verification (Facebook প্রথমবার এইটা কল করে) ----------
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
