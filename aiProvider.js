@@ -8,8 +8,11 @@ const PROVIDER = (process.env.AI_PROVIDER || "gemini").toLowerCase();
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Gemini-এর ফ্রি টিয়ারে ভালো চলে এমন মডেল; দাম বাড়লে .env-এ বদলে নিতে পারবেন
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+// ⚠️ IMPORTANT: gemini-2.0-flash 1 জুন, 2026-এ Google শাটডাউন করে দিয়েছে — সেটা ব্যবহার করলে
+// প্রতিটা রিকোয়েস্টে এরর আসবে। এখন gemini-2.5-flash ব্যবহার করা হচ্ছে (অ্যাক্টিভ মডেল)।
+// নোট: gemini-2.5-flash-ও ১৬ অক্টোবর, 2026-এ শাটডাউন হবে — তখন আবার .env-এ GEMINI_MODEL বদলে
+// gemini-3.5-flash বা তখনকার latest stable মডেলে নিয়ে যেতে হবে।
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 // OpenAI-এর সবচেয়ে সস্তা মডেল (পরে ব্যবহার করবেন)
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-nano";
 
